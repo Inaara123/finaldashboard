@@ -4,7 +4,9 @@ import styled from 'styled-components';
 import { supabase } from '../../supabaseClient';
 import Switch from 'react-switch';
 import dayjs from 'dayjs';
-
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend } from 'chart.js';
+// Register components
+ChartJS.register(BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 // Define filter options
 const filterOptions = [
   { label: 'Location', value: 'location' },
@@ -152,6 +154,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
   const searchResult = async (selectedFields)  => {
     
     try {
+      console.log('hospitalid',hospitalId);
       console.log('search function called with value:', selectedFields);
       //age_max - for between rangeend and for above rangeend
       const selectedAgeRange = selectedFields.find((ele) => ele.name === 'age');
@@ -217,8 +220,8 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
    
     try {
       // Replace 'hospital_id' and '1_month' with your actual parameters
- 
-      console.log(comparisonField == "discoveryChannel" ? 'how_did_you_get_to_know_us': comparisonField === "location" ? 'main_area' : comparisonField);
+      
+      console.log('hr',comparisonField == "discoveryChannel" ? 'how_did_you_get_to_know_us': comparisonField === "location" ? 'main_area' : comparisonField === "weekdayWeekend" ? 'day_of_week' :comparisonField);
       const selectedAgeRange = fields.find((ele) => ele.name === 'age');
       const max_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'above') ? selectedAgeRange?.rangeEnd : null;
       const min_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'below') ? selectedAgeRange?.rangeStart : null;
@@ -252,6 +255,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
       
       setPatientData(formattedData);
       setLoading(false); // Stop loading after data is set
+
     } catch (err) {
       console.error('Fetch error:', err);
       setLoading(false); // Stop loading in case of error
@@ -309,7 +313,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
       },
     ],
   };
-  
+  console.log('bar',patientData);
   const options = {
     indexAxis: 'x', // This makes the bar chart vertical
     responsive: true,
