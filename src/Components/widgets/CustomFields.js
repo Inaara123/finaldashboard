@@ -156,26 +156,43 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
     try {
       console.log('hospitalid',hospitalId);
       console.log('search function called with value:', selectedFields);
+      console.log(selectedFields.find((ele) => ele.name === "weekdayWeekend")?.value||null);
       //age_max - for between rangeend and for above rangeend
       const selectedAgeRange = selectedFields.find((ele) => ele.name === 'age');
-      const max_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'below') ? selectedAgeRange?.rangeEnd : null;
-      const min_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'above') ? selectedAgeRange?.rangeStart : null;
+      const max_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'below') 
+      ? selectedAgeRange?.rangeEnd 
+      : (selectedAgeRange?.value === 'all' ? null : null);
+      const min_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'above') 
+      ? selectedAgeRange?.rangeStart 
+      : (selectedAgeRange?.value === 'all' ? null : null);
       console.log('day of week',selectedFields.find((ele) => ele.name === "day_of_week")?.value ?? null);
       
       const { data, error } = await supabase.rpc('dynamic_patient_count', {        
-        p_location: selectedFields.find((ele) => ele.name === 'location')?.value || null,
+        p_location: selectedFields.find((ele) => ele.name === 'location')?.value === "all"
+        ? null 
+        : selectedFields.find((ele) => ele.name === 'location')?.value || null,
         p_hospital_id:hospitalId, 
-        p_discovery_channel: selectedFields.find((ele) => ele.name === "discoveryChannel")?.value ?? null,
+        p_discovery_channel: selectedFields.find((ele) => ele.name === "discoveryChannel")?.value === "all"
+        ? null 
+        : selectedFields.find((ele) => ele.name === "discoveryChannel")?.value ?? null,
         p_age_min: min_age ?? null,
         p_age_max:max_age ?? null,
         p_doctor_id:selectedDoctorId,
-        p_day_of_week:selectedFields.find((ele) => ele.name === "day_of_week")?.value ?? null,
+        p_day_of_week:selectedFields.find((ele) => ele.name === "day_of_week")?.value === "all"
+        ? null 
+        : selectedFields.find((ele) => ele.name === "day_of_week")?.value || null,
         p_start_date:startDate,
         p_end_date:endDate,
-        p_gender:selectedFields.find((ele) => ele.name === "gender")?.value ?? null,
-        p_type: selectedFields.find((ele) => ele.name === "appointment_type")?.value ?? null,
+        p_gender:selectedFields.find((ele) => ele.name === "gender")?.value === "all"
+        ? null 
+        : selectedFields.find((ele) => ele.name === "gender")?.value ?? null,
+        p_type: selectedFields.find((ele) => ele.name === "appointment_type")?.value === "all"
+        ? null 
+        : selectedFields.find((ele) => ele.name === "appointment_type")?.value ?? null,
         p_time_range:selectedRange,
-        p_day_of_week:selectedFields.find((ele) => ele.name === "weekdayWeekend")?.value ?? null
+        p_weekday:selectedFields.find((ele) => ele.name === "weekdayWeekend")?.value === "all" 
+        ? null 
+        : selectedFields.find((ele) => ele.name === "weekdayWeekend")?.value ?? null
       });
   
       if (error) {
@@ -183,6 +200,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
         setData([]); // Clear data if error occurs
         return;
       }
+      console.log('day of weeks',data);
       setData(data);
     } catch (err) {
       console.error('Error fetching filtered data:', err);
@@ -467,7 +485,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
         return (
           <Dropdown value={field.value} onChange={(e) => handleFieldChange(field.id, field.name, e.target.value)}>
             <option value="all">All</option>
-            <option value="FriendsFamily">Friends and Family</option>
+            <option value="Friends and Family">Friends and Family</option>
             <option value="Google">Google</option>
             <option value="Instagram">Instagram</option>
             <option value="Facebook">Facebook</option>
@@ -475,7 +493,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
           </Dropdown>
         );
       case 'appointment_type':
-        return (
+        return ( 
           <Dropdown value={field.value} onChange={(e) => handleFieldChange(field.id, field.name, e.target.value)}>
             <option value="all">All</option>
             <option value="Walk-in">Walkin</option>
