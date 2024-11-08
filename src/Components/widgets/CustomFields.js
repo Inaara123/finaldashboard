@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Line,Bar } from 'react-chartjs-2';
 import styled from 'styled-components';
 import { supabase } from '../../supabaseClient';
 import Switch from 'react-switch';
@@ -106,6 +106,17 @@ const ComparisonContainer = styled.div`
   justify-content: flex-start;
   align-items: center;
 `;
+const TrendsContainer = styled.div`
+  margin-top: 10px; // Reduced top margin
+  padding: 10px; // Reduced padding
+  background-color: #333;
+  border: 1px solid #444;
+  border-radius: 8px; // Slightly smaller border radius
+  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.2); // Slightly reduced shadow
+  max-width: 60%; // Reduce width if needed for compact appearance
+`;
+
+
 
 // Define your CustomFields component
 const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedRange,startDate, endDate,width,height }) => {
@@ -118,6 +129,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
   const [patientData, setPatientData] = useState([
   ]);
   const [loading, setLoading] = useState(true);
+  const [trendData, setTrendData] = useState(null);
   // Function to fetch unique locations from the database
   const fetchUniqueLocations = async () => {
     const { data:locationsData, error } = await supabase.rpc('get_distinct_main_area', {        
@@ -258,7 +270,7 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
         p_doctor_id:selectedDoctorId
       });
 
-
+      console.log('locations',data);
       if (error) {
         console.error('Error fetching patient growth stats:', error.message);
         setLoading(false); // Stop loading in case of error
@@ -390,6 +402,74 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
       },
     },
   };
+
+  useEffect(() => {
+    const fetchTrendData = async () => {
+      try {
+        
+        const selectedAgeRange = fields.find((ele) => ele.name === 'age');
+        const max_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'above') ? selectedAgeRange?.rangeEnd : null;
+        const min_age = (selectedAgeRange?.value === 'between' || selectedAgeRange?.value === 'below') ? selectedAgeRange?.rangeStart : null;
+        console.log('time range dates',startDate);
+        const { data, error } = await supabase.rpc('patient_discovery_count_dynamic', {
+          p_group_by: 'time_range',
+          p_secondary_group_by: 'time_range',
+          p_start_date: startDate,
+          p_end_date: endDate,
+          p_gender: fields.find((item) => item.name === 'gender')?.value || null,
+          p_address: fields.find((item) => item.name === 'location')?.value || null,
+          p_min_age: min_age,
+          p_max_age: max_age,
+          p_discovery: fields.find((item) => item.name === 'discoveryChannel')?.value || null,
+          p_time_range: selectedRange,
+          p_hospital_id: hospitalId,
+          p_doctor_id: selectedDoctorId,
+        });
+
+        if (error) {
+          console.error('Error fetching data:', error.message);
+          setLoading(false);
+          return;
+        }
+        console.log('time_range data',data);
+        // Format data for chart display
+        if (data && data.length > 0) {
+        const formattedLabels = data.map((item) => item.group_value);
+        const formattedCounts = data.map((item) => item.count);
+
+        setTrendData({
+          labels: formattedLabels,
+          datasets: [
+            {
+              label: 'Trend Over Time',
+              data: formattedCounts,
+              fill: false,
+              borderColor: '#4285F4',
+            },
+          ],
+        });
+      }else {
+        console.log("No data returned from database.");
+        setTrendData(null);
+      }
+        setLoading(false);
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setLoading(false);
+      }
+    };
+
+    fetchTrendData();
+  }, [startDate, endDate, selectedRange, hospitalId, selectedDoctorId, fields]);
+
+  const trendOptions = {
+    responsive: true,
+    scales: {
+      x: { title: { display: true, text: 'Time Period' } },
+      y: { title: { display: true, text: 'Number of patients visited' } },
+    },
+  };
+    // Sample trends data (replace with actual data fetching logic)
 
   const handleComparisonChange = (e) => {
     setComparisonField(e.target.value);
@@ -557,6 +637,19 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
 
         <h3>Fetched Data:</h3>
         <pre>{JSON.stringify(data, null, 2)}</pre>
+
+        <TrendsContainer>
+  <h3>Trends Over Time</h3>
+  <ChartContainer>
+    {loading ? (
+      <p>Loading data...</p> // Display loading message
+    ) : trendData && trendData.labels ? (
+      <Line data={trendData} options={trendOptions} /> // Render the chart only if trendData has valid labels
+    ) : (
+      <p>No data available.</p> // Display message when no data is available
+    )}
+  </ChartContainer>
+</TrendsContainer>
       </FieldsContainer>
 
       <ComparisonContainer>
@@ -592,7 +685,6 @@ const CustomFields = ({ hospitalId,selectedDoctorId, selectedRange, setSelectedR
           </WidgetContainer>
       )}
       </ComparisonContainer>
-
     </Container>
   );
 };
